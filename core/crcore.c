@@ -2,8 +2,8 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:53:49
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-06-03 00:50:01
- * @FilePath: \Crystal-Core\core\crcore.c
+ * @LastEditTime: 2024-06-16 16:41:14
+ * @FilePath: \CrystalCore\core\crcore.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
  */
@@ -45,6 +45,8 @@ void* CRCoreFunList[] =
     _cr_inner_do_nothing_, "CRAlloc",
     0 //检测到0表示清单结尾
 };
+static CRMODINIT _inner_init_mod_ = NULL;
+static CRMODUNINIT _inner_uninit_mod_ = NULL;
 
 static const CRCHAR* _inner_conv_path_(const CRCHAR* name, const CRCHAR* argv)
 {
@@ -97,6 +99,14 @@ CRMODULE CRImport(const CRCHAR* name, void* list[], const CRCHAR* argv)
         return NULL;
     }
     CRUINT64 i = 0;
+    //
+    #ifdef CR_WINDOWS
+    _inner_init_mod_ = (CRMODINIT)GetProcAddress(pInner->mod, "CRModInit");
+    #elif defined CR_LINUX
+    _inner_init_mod_ = (CRMODINIT)dlsym(pInner->mod, "CRModInit");
+    #endif
+    if (_inner_init_mod_) _inner_init_mod_(CRCoreFunList);
+    //
     while(list[i])
     {
         #ifdef CR_WINDOWS
@@ -122,8 +132,12 @@ void CRUnload(CRMODULE mod)
         i += 2;
     }
     #ifdef CR_WINDOWS
+    _inner_uninit_mod_ = (CRMODUNINIT)GetProcAddress(pInner->mod, "CRModUninit");
+    if (_inner_uninit_mod_) _inner_uninit_mod_();
     FreeLibrary(pInner->mod);
     #elif defined CR_LINUX
+    _inner_uninit_mod_ = (CRMODUNINIT)dlsym(pInner->mod, "CRModUninit");
+    if (_inner_uninit_mod_) _inner_uninit_mod_();
     dlclose(pInner->mod);
     #endif
     free(mod);

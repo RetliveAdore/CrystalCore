@@ -2,8 +2,8 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:54:35
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-06-03 00:18:45
- * @FilePath: \Crystal-Core\include\CrystalCore.h
+ * @LastEditTime: 2024-06-16 16:39:59
+ * @FilePath: \CrystalCore\include\CrystalCore.h
  * @Description: 这个就是核心文件头了，内部包含一个自动加载器和手动加载器
  * 自动加载器是用于加载CrystalCore.so的，手动加载器是用于加载出核心以外的所有模块的
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -23,6 +23,9 @@ void _cr_inner_do_nothing_(void);
  * 模块函数清单传递入CRLoadMod以自动完成模块的加载
 */
 extern void* CRCoreFunList[];
+typedef CRBOOL(*CRMODINIT)(void** list);
+typedef void(*CRMODUNINIT)(void);
+
 #endif
 
 /**
