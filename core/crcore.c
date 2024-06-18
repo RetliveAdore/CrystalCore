@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:53:49
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-06-18 14:46:23
+ * @LastEditTime: 2024-06-18 19:28:15
  * @FilePath: \CrystalCore\core\crcore.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -35,7 +35,7 @@ static CRCHAR Path[256] = {'\0'};
 
 void _cr_inner_do_nothing_(void){};
 
-void* CRCoreFunList[] =
+void* CRCoreFunListArr[] =
 {
     _cr_inner_do_nothing_, "CRLogDate",
     _cr_inner_do_nothing_, "CRPrint",
@@ -46,6 +46,7 @@ void* CRCoreFunList[] =
     _cr_inner_do_nothing_, "CRAlloc",
     0 //检测到0表示清单结尾
 };
+void** CRCoreFunList = CRCoreFunListArr;
 static CRMODINIT _inner_init_mod_ = NULL;
 static CRMODUNINIT _inner_uninit_mod_ = NULL;
 
