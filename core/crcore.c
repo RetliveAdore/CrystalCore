@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:53:49
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-06-16 16:41:14
+ * @LastEditTime: 2024-06-18 14:46:23
  * @FilePath: \CrystalCore\core\crcore.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -41,6 +41,7 @@ void* CRCoreFunList[] =
     _cr_inner_do_nothing_, "CRPrint",
     _cr_inner_do_nothing_, "CRTrace",
     _cr_inner_do_nothing_, "CRSetLogFile",
+    _cr_inner_do_nothing_, "CRLogDefault",
     //
     _cr_inner_do_nothing_, "CRAlloc",
     0 //检测到0表示清单结尾

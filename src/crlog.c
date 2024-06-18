@@ -2,8 +2,8 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-05-29 18:26:08
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-06-02 22:55:42
- * @FilePath: \Crystal-Core\src\crlog.c
+ * @LastEditTime: 2024-06-18 15:59:02
+ * @FilePath: \CrystalCore\src\crlog.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
  */
@@ -36,6 +36,9 @@ static disposableFunctionInit _inner_init_ = _inner_init_logfile_name_;
 
 static CRCHAR logFileName[1024];
 static CRBOOL initedLogFile = CRFALSE;
+static const CRCHAR defaultTag[] = "console";
+static const CRCHAR* tag = defaultTag;
+static CRUINT8 defaultLevel = 0;
 
 static const CRCHAR* slevel[] =
 {
@@ -85,14 +88,21 @@ void CRSetLogFile(const CRCHAR* path)
     _inner_init_ = _inner_init_null_;
 }
 
-void CRTrace(const CRCHAR* target, CRUINT8 level, const CRCHAR* file, CRUINT32 line, const CRCHAR* function, const CRCHAR* fmt, ...)
+CRAPI void CRLogDefault(const CRCHAR* tagIn, CRUINT8 level)
 {
+    if (!tagIn) tag = defaultTag;
+    else tag = tagIn;
+    defaultLevel = level;
+}
+
+CRAPI void CRTrace(const CRCHAR* target, CRUINT8 level, const CRCHAR* file, CRUINT32 line, const CRCHAR* function, const CRCHAR* fmt, ...)
+{
+    if (level < defaultLevel) return;
     va_list ap;
     CRCHAR* buffer;
     CRINT32 ret;
     CRBOOL logErr = CRFALSE;
     static CRCHAR* errBuffer = "Crystal Log Error\n";
-    
     //缓冲区大小是有限的
     if (!(buffer = malloc(BUFFER_SIZE))) return;
     ret = snprintf(buffer, BUFFER_SIZE, "%s(%d) <%s>-<%s>[%s]: ",
@@ -113,7 +123,9 @@ Throw:
     //生成日志字符串和输出日志是独立的两个部分
     if (!target)
         goto nullTarget;
-    else if (_inner_compare_string_("console", target))
+    if (_inner_compare_string_("auto", target))
+        target = tag;
+    if (_inner_compare_string_("console", target))
     {
         switch (level)
         {
@@ -233,7 +245,7 @@ static void _inner_set_text_color_(CRTextColor color)
     #endif
 }
 
-CRINT64 CRPrint(CRTextColor color, const CRCHAR* fmt, ...)
+CRAPI CRINT64 CRPrint(CRTextColor color, const CRCHAR* fmt, ...)
 {
     va_list ap;
     _inner_set_text_color_(color);
@@ -244,7 +256,7 @@ CRINT64 CRPrint(CRTextColor color, const CRCHAR* fmt, ...)
     return back;
 }
 
-CRDate CRLogDate()
+CRAPI CRDate CRLogDate()
 {
     CRDate date;
     #ifdef CR_WINDOWS

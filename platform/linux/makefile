@@ -20,10 +20,10 @@ clean:
 copy:
 
 ./out/objs/src/%.o: ./src/%.c
-	@gcc -fPIC -c $^ -o $@ $(INCLUDE_PATHS)
+	@gcc -fvisibility=hidden -fPIC -c $^ -o $@ $(INCLUDE_PATHS)
 
 ./out/objs/core/%.o: ./core/%.c
-	@gcc -fPIC -c $^ -o $@ $(INCLUDE_PATHS)
+	@gcc -fvisibility=hidden -fPIC -c $^ -o $@ $(INCLUDE_PATHS)
 
 build: clean $(OBJ_FILES_MOD) $(OBJ_FILES_CORE) copy
 	@ar rcs out/Linux/libCrystalCore.a $(OBJ_FILES_CORE)

@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:54:35
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-06-16 16:39:59
+ * @LastEditTime: 2024-06-18 15:39:39
  * @FilePath: \CrystalCore\include\CrystalCore.h
  * @Description: 这个就是核心文件头了，内部包含一个自动加载器和手动加载器
  * 自动加载器是用于加载CrystalCore.so的，手动加载器是用于加载出核心以外的所有模块的
@@ -64,6 +64,11 @@ typedef void(*CRTRACE)(const CRCHAR* target, CRUINT8 level, const CRCHAR* file, 
 */
 typedef void(*CRSETLOGFILE)(const CRCHAR* path);
 #define CRSetLogFile ((CRSETLOGFILE)CRCoreFunList[6])
+/**
+ * 设置默认的日志参数
+*/
+typedef void(*CRLOGDEFAULT)(const CRCHAR* tag, CRUINT8 level);
+#define CRLogDefault ((CRLOGDEFAULT)CRCoreFunList[8])
 
 /*
 关于tag的取值，有两个有效取值："console"和"file"
@@ -83,6 +88,6 @@ typedef void(*CRSETLOGFILE)(const CRCHAR* path);
  * 用于申请内存或调整内存
 */
 typedef void*(*CRALLOC)(void* ptr, CRUINT64 size);
-#define CRAlloc ((CRALLOC)CRCoreFunList[8])
+#define CRAlloc ((CRALLOC)CRCoreFunList[10])
 
 #endif
