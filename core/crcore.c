@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:53:49
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-06-18 19:28:15
+ * @LastEditTime: 2024-06-24 01:30:55
  * @FilePath: \CrystalCore\core\crcore.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -116,7 +116,11 @@ CRMODULE CRImport(const CRCHAR* name, void* list[], const CRCHAR* argv)
         #elif defined CR_LINUX
         list[i] = dlsym(pInner->mod, list[i + 1]);
         #endif
-        if (!list[i]) list[i] = _cr_inner_do_nothing_;
+        if (!list[i])
+        {
+            CR_LOG_ERR("auto", "Faild load: %s", list[i + 1]);
+            list[i] = _cr_inner_do_nothing_;
+        }
         i += 2;
     }
     if (argv) free(*((CRCHAR**)&name));
