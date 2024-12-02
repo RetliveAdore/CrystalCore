@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:54:35
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-06-18 19:27:48
+ * @LastEditTime: 2024-12-02 22:56:01
  * @FilePath: \CrystalCore\include\CrystalCore.h
  * @Description: 这个就是核心文件头了，内部包含一个自动加载器和手动加载器
  * 自动加载器是用于加载CrystalCore.so的，手动加载器是用于加载出核心以外的所有模块的
@@ -85,9 +85,41 @@ typedef void(*CRLOGDEFAULT)(const CRCHAR* tag, CRUINT8 level);
 //
 
 /**
- * 用于申请内存或调整内存
+ * 用于申请内存或调整内存,
+ * 使用之前需要先调用CRMemSetup进行初始化
 */
 typedef void*(*CRALLOC)(void* ptr, CRUINT64 size);
 #define CRAlloc ((CRALLOC)CRCoreFunList[10])
+/**
+ * 初始化动态内存堆
+ * 传入初始化的内存字节数，
+ * 初始化之后，在没有分配内存的情况下，可以重新初始化。
+ * 程序结束之后需要执行CRMemClear来释放内存堆。
+ * 返回值：
+ * 0：初始化成功；
+ * 1：内存申请失败；
+ * 2：正在使用中的内存。
+ * 3：传入的容量（size）过小
+ */
+typedef CRCODE(*CRMEMSETUP)(CRUINT64 size);
+#define CRMemSetup ((CRMEMSETUP)CRCoreFunList[12])
+/**
+ * 释放动态内存堆
+ * 此时无论是否有正在使用的内存块都将直接释放堆，请确保在退出的最后一步执行。
+ * 释放之后可以使用CRMemSetup重新初始化内存堆
+ * 返回值：
+ * 0：正常释放；
+ * 1：有正在使用的块（仍然释放）；
+ * 2：尚未初始化。
+ */
+typedef CRCODE(*CRMEMCLEAR)(void);
+#define CRMemClear ((CRMEMCLEAR)CRCoreFunList[14])
+/**
+ * 遍历动态内存堆
+ * 将所有正在使用的内存块一一列出，仅提供显示，无其他操作。
+ * 返回值：无
+ */
+typedef void(*CRMEMITERATOR)(void);
+#define CRMemIterator ((CRMEMITERATOR)CRCoreFunList[16])
 
 #endif
