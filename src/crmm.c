@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:35:36
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-04 16:45:46
+ * @LastEditTime: 2024-12-04 17:06:45
  * @FilePath: \CrystalCore\src\crmm.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -146,7 +146,7 @@ extern CRAPI CRINT64 CRPrint(CRTextColor color, const CRCHAR* fmt, ...);
 static void _inner_split_block_(PBLOCK_HEADER header, CRUINT64 size)
 {
     header->used = 1;
-    if (header->size - HEADER_SIZE > size)
+    if (header->size > size + HEADER_SIZE)
     {
         PBLOCK_HEADER newHeader = (PBLOCK_HEADER)&ram[header->this + size + HEADER_SIZE];
         newHeader->prev = header->this;
@@ -184,7 +184,6 @@ static PBLOCK_HEADER _inner_allocate_(CRUINT64 size)
  */
 static PBLOCK_HEADER _inner_melt_(PBLOCK_HEADER header)
 {
-    CRPrint(CR_TC_GREEN, "size: %d\n", header->size);
     header->used = 0;
     PBLOCK_HEADER p, n;
 Repeat:  //理论上是不需要重复的，但为了防止意外情况导致内存分裂，进行迭代操作
@@ -244,7 +243,7 @@ CRAPI void* CRAlloc(void* ptr, CRUINT64 size)
         PBLOCK_HEADER header = _inner_melt_(headerOld);
         if (size < header->size)
         {
-            _inner_split_block_(header, header->size);
+            _inner_split_block_(header, size);
             if (header == headerOld)
                 return ptr;
         }
