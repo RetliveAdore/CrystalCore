@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:35:36
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-02 23:09:26
+ * @LastEditTime: 2024-12-04 16:45:46
  * @FilePath: \CrystalCore\src\crmm.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -14,16 +14,35 @@
 static unsigned char* ram = NULL;
 static CRUINT64 ramSize = 0;
 
+//prev、this、next存储的都是在ram中的下标
 typedef struct block_header
 {
-    struct block_header* prev;
-    //if next if NULL, it's end of ram.
-    struct block_header* next;
-    //CRTRUE: used, CRFALSE: available
-    CRBOOL used;
+    CRINT64 prev;
+    CRINT64 this;
+    CRINT64 next;
+    //1: used, 0: available, 2: endblock
+    CRUINT64 used;
     CRUINT64 size;
+    CRUINT64 reserved;
 } *PBLOCK_HEADER;
+#define HEADER_SIZE sizeof(struct block_header)
 
+/**
+ * 内部函数，获取前一个块头
+ */
+static inline PBLOCK_HEADER _inner_get_prev_block_(PBLOCK_HEADER header)
+{
+    if (header->prev != -1) return (PBLOCK_HEADER)&(ram[header->prev]);
+    return NULL;
+}
+/**
+ * 内部函数，获取后一个块头
+ */
+static inline PBLOCK_HEADER _inner_get_next_block_(PBLOCK_HEADER header)
+{
+    if (header->next) return (PBLOCK_HEADER)&(ram[header->next]);
+    return NULL;
+}
 /**
  * 内部内联函数，负责创建动态内存堆的初始块和结尾块。
  */
@@ -31,16 +50,18 @@ static inline void _inner_create_initial_blocks_(CRUINT64 size)
 {
     PBLOCK_HEADER mem1 = (PBLOCK_HEADER)ram;
     PBLOCK_HEADER mem2 = NULL;
-    mem1->prev = NULL;
-    mem1->next = (PBLOCK_HEADER)&(ram[size - sizeof(struct block_header) - 1]);
-    mem1->used = CRFALSE;
-    mem1->size = size - sizeof(struct block_header) * 2;
-    mem2 = mem1->next;
-    mem2->prev = mem1;
-    mem2->next = NULL;
+    mem1->prev = -1;
+    mem1->this = 0;
+    mem1->next = size - HEADER_SIZE;
+    mem1->size = size - HEADER_SIZE * 2;
+    mem1->used = 0;
+    //
+    mem2 = _inner_get_next_block_(mem1);
+    mem2->prev = mem1->this;
+    mem2->this = mem1->next;
+    mem2->next = 0;
     mem2->size = 0;
-    //结尾块始终处于已分配状态，此类为特殊情况
-    mem2->used = CRTRUE;
+    mem2->used = 2;
 }
 
 /**
@@ -76,7 +97,7 @@ CRAPI CRCODE CRMemSetup(CRUINT64 size)
         {
             if (mem->used)
                 return 2;
-            mem = mem->next;
+            mem = _inner_get_next_block_(mem);
         };
         ram = realloc(ram, size);
         if (!ram)
@@ -100,23 +121,104 @@ CRAPI CRCODE CRMemSetup(CRUINT64 size)
 CRCODE CRMemClear(void)
 {
     CRCODE back = 0;
-    PBLOCK_HEADER mem1 = (PBLOCK_HEADER)ram;
-    PBLOCK_HEADER mem2 = NULL;
+    PBLOCK_HEADER mem = (PBLOCK_HEADER)ram;
     if (!ram) return 2;
     //检查是否有尚未释放的块
     //即使有尚未释放的块，也将强制释放，但返回1。
-    while (mem1->next)
+    while (mem->next)
     {
-        mem2 = mem1->next;
-        if (mem2->used && mem2->next)
+        if (mem->used)
+        {
             back = 1;
-            mem1 = mem2;
+            break;
+        }
+        mem = _inner_get_next_block_(mem);
     }
     free(ram);
     ram = NULL;
     return back;
 }
 
+extern CRAPI CRINT64 CRPrint(CRTextColor color, const CRCHAR* fmt, ...);
+/**
+ * 内部函数，用于分配内存块时分割空闲块
+ */
+static void _inner_split_block_(PBLOCK_HEADER header, CRUINT64 size)
+{
+    header->used = 1;
+    if (header->size - HEADER_SIZE > size)
+    {
+        PBLOCK_HEADER newHeader = (PBLOCK_HEADER)&ram[header->this + size + HEADER_SIZE];
+        newHeader->prev = header->this;
+        newHeader->this = header->this + size + HEADER_SIZE;
+        newHeader->next = header->next;
+        newHeader->used = 0;
+        newHeader->size = header->size - size - HEADER_SIZE;
+        //
+        header->next = newHeader->this;
+        header->size = size;
+        //
+        header = _inner_get_next_block_(newHeader);
+        header->prev = newHeader->this;
+    }
+}
+/**
+ * 内部函数，用于寻找合适的块然后分配内存
+ */
+static PBLOCK_HEADER _inner_allocate_(CRUINT64 size)
+{
+    PBLOCK_HEADER header = (PBLOCK_HEADER)ram;
+    while (header->next)
+    {
+        if (!header->used && header->size >= size)
+        {
+            _inner_split_block_(header, size);
+            return header;
+        }
+        header = _inner_get_next_block_(header);
+    }
+    return NULL;
+}
+/**
+ * 内部函数，用于释放并融合内存块
+ */
+static PBLOCK_HEADER _inner_melt_(PBLOCK_HEADER header)
+{
+    CRPrint(CR_TC_GREEN, "size: %d\n", header->size);
+    header->used = 0;
+    PBLOCK_HEADER p, n;
+Repeat:  //理论上是不需要重复的，但为了防止意外情况导致内存分裂，进行迭代操作
+    p = _inner_get_prev_block_(header);
+    n = _inner_get_next_block_(header);
+    if (n && !n->used)
+    {
+        header->size += n->size + HEADER_SIZE;
+        header->next = n->next;
+        n = _inner_get_next_block_(header);
+        n->prev = header->this;
+        goto Repeat;
+    }
+    if (p && !p->used)
+    {
+        header = p;
+        goto Repeat;
+    }
+    return header;
+}
+/**
+ * 内部函数，用于指针转换为块头
+ */
+static inline PBLOCK_HEADER _inner_ptr_to_header_(void* ptr)
+{
+    return (PBLOCK_HEADER)((CRUINT64)ptr - (CRUINT64)HEADER_SIZE);
+}
+/**
+ * 内部函数，用于块头转换为指针
+ */
+static inline void* _inner_header_to_ptr_(PBLOCK_HEADER header)
+{
+    return (void*)((CRUINT64)header + (CRUINT64)HEADER_SIZE);
+}
 /**
  * 用于分配内存，传入一个指针（可以是NULL），返回重新分配后的指针。
  * 如果size传0，而且传入的是非NULL指针，将执行释放内存操作。
@@ -124,12 +226,43 @@ CRCODE CRMemClear(void)
 */
 CRAPI void* CRAlloc(void* ptr, CRUINT64 size)
 {
-    void* back = realloc(ptr, size);
-    if (!back) return ptr;
-    return back;
+    if (!ram) return NULL;
+    if (!ptr)
+    {
+        if (!size) return NULL;
+        PBLOCK_HEADER header = _inner_allocate_(size);
+        if (header) return _inner_header_to_ptr_(header);
+    }
+    else if (!size)  //释放内存
+    {
+        PBLOCK_HEADER header = _inner_ptr_to_header_(ptr);
+        _inner_melt_(header);
+    }
+    else  //调整内存
+    {
+        PBLOCK_HEADER headerOld = _inner_ptr_to_header_(ptr);
+        PBLOCK_HEADER header = _inner_melt_(headerOld);
+        if (size < header->size)
+        {
+            _inner_split_block_(header, header->size);
+            if (header == headerOld)
+                return ptr;
+        }
+        else if (size > header->size)
+        {
+            header = _inner_allocate_(size);
+            if (!header) return NULL;
+        }
+        else return ptr;
+        //拷贝内存
+        unsigned char* mem = _inner_header_to_ptr_(header);
+        for (CRUINT64 i = 0; i < headerOld->size; i++)
+            mem[i] = ((unsigned char*)ptr)[i];
+        return mem;
+    }
+    return NULL;
 }
 
-extern CRAPI CRINT64 CRPrint(CRTextColor color, const CRCHAR* fmt, ...);
 /**
  * 遍历动态内存堆
  * 将所有正在使用的内存块一一列出，仅提供显示，无其他操作。
@@ -138,20 +271,20 @@ extern CRAPI CRINT64 CRPrint(CRTextColor color, const CRCHAR* fmt, ...);
 CRAPI void CRMemIterator(void)
 {
     PBLOCK_HEADER block = (PBLOCK_HEADER)ram;
-    if (ram)
+    CRUINT64 i = 1;
+    while (block->next)
     {
-        CRUINT64 i = 1;
-        while(block->next)
-        {
-            CRPrint(CR_TC_BLUE, "block%d:\t%s,\tsize: %d\n",
-                i,
-                block->used ? "used" : "available",
-                block->size
-            );
-            i++;
-            block = block->next;
-        }
-        CRPrint(CR_TC_BLUE, "block%d:\tendblock\n", i);
+        CRPrint(CR_TC_BLUE,
+            "block%d:\tusage: %d, size: %d,\tp: %d,\tn: %d,\tthis: %d\n",
+            i, block->used, block->size,
+            block->prev, block->next, block->this
+        );
+        block = _inner_get_next_block_(block);
+        i++;
     }
-    else CRPrint(CR_TC_RED, "ram not inited!\n");
+    CRPrint(CR_TC_BLUE,
+        "block%d:\tusage: %d, size: %d,\tp: %d,\tn: %d,\tthis: %d\n\n",
+        i, block->used, block->size,
+        block->prev, block->next, block->this
+    );
 }
