@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:36:02
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-02 22:37:04
+ * @LastEditTime: 2024-12-06 23:20:36
  * @FilePath: \CrystalCore\include\CrystalMemory.h
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -11,5 +11,15 @@
 #define _INCLUDE_CRYSTALMEMORY_H_
 
 #include "definitions.h"
+
+typedef CRLVOID CRDYNAMIC;
+
+typedef enum CRDynEnum
+{
+    DYN_MODE_8 = 0,
+    DYN_MODE_16 = 1,
+    DYN_MODE_32 = 2,
+    DYN_MODE_64 = 3
+}CRDynEnum;
 
 #endif

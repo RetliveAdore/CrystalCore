@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:54:35
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-02 22:56:01
+ * @LastEditTime: 2024-12-07 16:00:25
  * @FilePath: \CrystalCore\include\CrystalCore.h
  * @Description: 这个就是核心文件头了，内部包含一个自动加载器和手动加载器
  * 自动加载器是用于加载CrystalCore.so的，手动加载器是用于加载出核心以外的所有模块的
@@ -13,6 +13,7 @@
 
 #include <definitions.h>
 #include <CrystalLog.h>
+#include <CrystalMemory.h>
 
 //什么都不做的占位函数
 void _cr_inner_do_nothing_(void);
@@ -85,12 +86,6 @@ typedef void(*CRLOGDEFAULT)(const CRCHAR* tag, CRUINT8 level);
 //
 
 /**
- * 用于申请内存或调整内存,
- * 使用之前需要先调用CRMemSetup进行初始化
-*/
-typedef void*(*CRALLOC)(void* ptr, CRUINT64 size);
-#define CRAlloc ((CRALLOC)CRCoreFunList[10])
-/**
  * 初始化动态内存堆
  * 传入初始化的内存字节数，
  * 初始化之后，在没有分配内存的情况下，可以重新初始化。
@@ -121,5 +116,72 @@ typedef CRCODE(*CRMEMCLEAR)(void);
  */
 typedef void(*CRMEMITERATOR)(void);
 #define CRMemIterator ((CRMEMITERATOR)CRCoreFunList[16])
+
+/**
+ * 创建动态数组
+ * 传入：初始大小（字节）
+ * 返回值：动态数组
+ * 假如创建失败，返回NULL，只有初始化动态内存堆之后且容量充足才能成功创建。
+ * 内部结构隐藏，用于替代原生下标访问。
+ * 由于动态内存堆无法原生进行数组访问越界检测，故不开放原生下标访问方式。
+ */
+typedef CRDYNAMIC(*PCRDYN)(CRUINT64 size);
+#define CRDyn ((PCRDYN)CRCoreFunList[18])
+/**
+ * 释放创建的动态数组
+ */
+typedef CRBOOL(*CRFREEDYN)(CRDYNAMIC dyn);
+#define CRFreeDyn ((CRFREEDYN)CRCoreFunList[20])
+/**
+ * 获取动态数组大小
+ * 返回值：字节数
+ */
+typedef CRUINT64(*CRDYNSIZE)(CRDYNAMIC dyn);
+#define CRDynSize ((CRDYNSIZE)CRCoreFunList[22]);
+/**
+ * 在动态数组末尾压入数据
+ * 参数1：要操作的动态数组
+ * 参数2：要压入的数据
+ * 参数3：字长模式
+ * 返回值：压入失败为CRFALSE，否则为CRTRUE
+ * 此操作会自动增加动态数组的大小，当容量增加失败时，会压入失败；
+ * 字长模式可选，最小单位为字节（8比特），可选为：
+ * DYN_MODE_XX，支持的字长为：8、16、32、64。
+ */
+typedef CRBOOL(*CRDYNPUSH)(CRDYNAMIC dyn, void* data, CRDynEnum mode);
+#define CRDynPush ((CRDYNPUSH)CRCoreFunList[24])
+/**
+ * 从动态数组末尾弹出数据
+ * 参数1：要操作的动态数组
+ * 参数2：用于接收数据的指针
+ * 参数3：字长模式
+ * 返回值：弹出失败为CRFALSE，否则为CRTRUE
+ * 此操作会自动缩小动态数组的大小，字长模式选择同CRDynPush。
+ */
+typedef CRBOOL(*CRDYNPOP)(CRDYNAMIC dyn, void* data, CRDynEnum mode);
+#define CRDynPop ((CRDYNPOP)CRCoreFunList[26])
+/**
+ * 设置动态数组中某一下标的值
+ * 参数1：要操作的动态数组
+ * 参数2：要设置的源数据
+ * 参数3：下标
+ * 参数4：字长模式
+ * 返回值：写入失败为CRFALSE，否则为CRTRUE
+ * 下标和字长模式将共同影响实际写入的位置，位置为：下标 * 字长；
+ * 当写入位置实际超过当前动态数组大小时，将自动切换到执行CRDynPush函数。
+ */
+typedef CRBOOL(*CRDYNSET)(CRDYNAMIC dyn, void *data, CRUINT64 sub, CRDynEnum mode);
+#define CRDynSet ((CRDYNSET)CRCoreFunList[28])
+/**
+ * 搜寻动态数组中某一下标的值
+ * 参数1：要操作的动态数组
+ * 参数2：用于接收数据的指针
+ * 参数3：下标
+ * 参数4：字长模式
+ * 返回值：无效的动态数组为CRFALSE，否则为CRTRUE
+ * 寻址模式同CRDynSet，当超出时，返回0数据。
+ */
+typedef CRBOOL(*CRDYNSEEK)(CRDYNAMIC dyn, void* data, CRUINT64 sub, CRDynEnum mode);
+#define CRDynSeek ((CRDYNSEEK)CRCoreFunList[30])
 
 #endif

@@ -9,14 +9,15 @@
  */
 #include <CrystalCore.h>
 #include <stdio.h>
+#include "header.h"
 
 CRAPI CRBOOL CRModInit(void** list)
 {
-    //printf("init\n");
+    _inner_initialize_();
     return CRTRUE;
 }
 
 CRAPI void CRModUninit(void)
 {
-    //printf("uninit\n");
+    _inner_delete_;
 }

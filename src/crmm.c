@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:35:36
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-04 17:06:45
+ * @LastEditTime: 2024-12-07 15:50:41
  * @FilePath: \CrystalCore\src\crmm.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -10,9 +10,15 @@
 #include <CrystalMemory.h>
 #include <CrystalLog.h>
 #include <malloc.h>
+#include "header.h"
 
 static unsigned char* ram = NULL;
 static CRUINT64 ramSize = 0;
+#ifdef CR_WINDOWS
+static CRITICAL_SECTION mem_cs;  //确保多线程安全
+#elif defined CR_LINUX
+static pthread_mutex_t mem_cs;  //确保多线程安全
+#endif
 
 //prev、this、next存储的都是在ram中的下标
 typedef struct block_header
@@ -26,6 +32,16 @@ typedef struct block_header
     CRUINT64 reserved;
 } *PBLOCK_HEADER;
 #define HEADER_SIZE sizeof(struct block_header)
+
+void _inner_initialize_()
+{
+    InitializeCriticalSection(&mem_cs);
+}
+
+void _inner_delete_()
+{
+    DeleteCriticalSection(&mem_cs);
+}
 
 /**
  * 内部函数，获取前一个块头
@@ -80,15 +96,20 @@ CRAPI CRCODE CRMemSetup(CRUINT64 size)
     //数据头的容量是包含在总容量中的。如果size太小将无法创建
     if (size <= sizeof(struct block_header) * 2)
         return 3;
+    EnterCriticalSection(&mem_cs);
     PBLOCK_HEADER mem = (PBLOCK_HEADER)ram;
     if (!ram)
     {
         ram = malloc(size);
         if (!ram)
+        {
+            LeaveCriticalSection(&mem_cs);
             return 1;
+        }
         //创建头尾块。
         _inner_create_initial_blocks_(size);
         ramSize = size;
+        LeaveCriticalSection(&mem_cs);
         return 0;
     }
     else //如果内存堆里面有尚未释放的块，就返回2，否则重新分配内存堆大小
@@ -96,16 +117,23 @@ CRAPI CRCODE CRMemSetup(CRUINT64 size)
         while (mem->next)  //只要next不为空，则不为结尾块（结尾块used恒为CRTRUE）
         {
             if (mem->used)
+            {
+                LeaveCriticalSection(&mem_cs);
                 return 2;
+            }
             mem = _inner_get_next_block_(mem);
         };
         ram = realloc(ram, size);
         if (!ram)
+        {
+            LeaveCriticalSection(&mem_cs);
             return 1;
+        }
         //创建头尾块。
         _inner_create_initial_blocks_(size);
         ramSize = size;
     }
+    LeaveCriticalSection(&mem_cs);
     return 0;
 }
 
@@ -125,6 +153,7 @@ CRCODE CRMemClear(void)
     if (!ram) return 2;
     //检查是否有尚未释放的块
     //即使有尚未释放的块，也将强制释放，但返回1。
+    EnterCriticalSection(&mem_cs);
     while (mem->next)
     {
         if (mem->used)
@@ -136,6 +165,7 @@ CRCODE CRMemClear(void)
     }
     free(ram);
     ram = NULL;
+    LeaveCriticalSection(&mem_cs);
     return back;
 }
 
@@ -226,11 +256,20 @@ static inline void* _inner_header_to_ptr_(PBLOCK_HEADER header)
 CRAPI void* CRAlloc(void* ptr, CRUINT64 size)
 {
     if (!ram) return NULL;
+    EnterCriticalSection(&mem_cs);
     if (!ptr)
     {
-        if (!size) return NULL;
+        if (!size)
+        {
+            LeaveCriticalSection(&mem_cs);
+            return NULL;
+        }
         PBLOCK_HEADER header = _inner_allocate_(size);
-        if (header) return _inner_header_to_ptr_(header);
+        if (header)
+        {
+            LeaveCriticalSection(&mem_cs);
+            return _inner_header_to_ptr_(header);
+        }
     }
     else if (!size)  //释放内存
     {
@@ -245,20 +284,33 @@ CRAPI void* CRAlloc(void* ptr, CRUINT64 size)
         {
             _inner_split_block_(header, size);
             if (header == headerOld)
+            {
+                LeaveCriticalSection(&mem_cs);
                 return ptr;
+            }
         }
         else if (size > header->size)
         {
             header = _inner_allocate_(size);
-            if (!header) return NULL;
+            if (!header)
+            {
+                LeaveCriticalSection(&mem_cs);
+                return NULL;
+            }
         }
-        else return ptr;
+        else
+        {
+            LeaveCriticalSection(&mem_cs);
+            return ptr;
+        }
         //拷贝内存
         unsigned char* mem = _inner_header_to_ptr_(header);
         for (CRUINT64 i = 0; i < headerOld->size; i++)
             mem[i] = ((unsigned char*)ptr)[i];
+        LeaveCriticalSection(&mem_cs);
         return mem;
     }
+    LeaveCriticalSection(&mem_cs);
     return NULL;
 }
 
@@ -271,6 +323,7 @@ CRAPI void CRMemIterator(void)
 {
     PBLOCK_HEADER block = (PBLOCK_HEADER)ram;
     CRUINT64 i = 1;
+    EnterCriticalSection(&mem_cs);
     while (block->next)
     {
         CRPrint(CR_TC_BLUE,
@@ -286,4 +339,5 @@ CRAPI void CRMemIterator(void)
         i, block->used, block->size,
         block->prev, block->next, block->this
     );
+    LeaveCriticalSection(&mem_cs);
 }
