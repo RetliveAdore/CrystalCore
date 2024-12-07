@@ -10,6 +10,7 @@
  * Copyright (c) 2024 by lizaterop@gmail.com, All Rights Reserved. 
  */
 #include <CrystalMemory.h>
+#include <string.h>
 #include "header.h"
 
 extern void* CRAlloc(void* ptr, CRUINT64 size);

@@ -11,6 +11,25 @@
 #include <stdio.h>
 #include "header.h"
 
+#ifdef CR_LINUX
+void InitializeCriticalSection(pthread_mutex_t* mt)
+{
+	pthread_mutex_init(mt, NULL);
+}
+void DeleteCriticalSection(pthread_mutex_t* mt)
+{
+	pthread_mutex_destroy(mt);
+}
+void EnterCriticalSection(pthread_mutex_t* mt)
+{
+	pthread_mutex_lock(mt);
+}
+void LeaveCriticalSection(pthread_mutex_t* mt)
+{
+	pthread_mutex_unlock(mt);
+}
+#endif
+
 CRAPI CRBOOL CRModInit(void** list)
 {
     _inner_initialize_();

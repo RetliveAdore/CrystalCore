@@ -18,22 +18,10 @@
 #include <Windows.h>
 #elif defined CR_LINUX
 #include <pthread.h>
-void InitializeCriticalSection(pthread_mutex_t* mt)
-{
-	pthread_mutex_init(mt, NULL);
-}
-void DeleteCriticalSection(pthread_mutex_t* mt)
-{
-	pthread_mutex_destroy(mt);
-}
-void EnterCriticalSection(pthread_mutex_t* mt)
-{
-	pthread_mutex_lock(mt);
-}
-void LeaveCriticalSection(pthread_mutex_t* mt)
-{
-	pthread_mutex_unlock(mt);
-}
+void InitializeCriticalSection(pthread_mutex_t* mt);
+void DeleteCriticalSection(pthread_mutex_t* mt);
+void EnterCriticalSection(pthread_mutex_t* mt);
+void LeaveCriticalSection(pthread_mutex_t* mt);
 #endif
 
 void _inner_initialize_();

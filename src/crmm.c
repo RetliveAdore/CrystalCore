@@ -146,7 +146,7 @@ CRAPI CRCODE CRMemSetup(CRUINT64 size)
  * 1：有正在使用的块（仍然释放）；
  * 2：尚未初始化。
  */
-CRCODE CRMemClear(void)
+CRAPI CRCODE CRMemClear(void)
 {
     CRCODE back = 0;
     PBLOCK_HEADER mem = (PBLOCK_HEADER)ram;
