@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-05-31 23:41:57
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-04 20:31:46
+ * @LastEditTime: 2024-12-07 18:04:02
  * @FilePath: \CrystalCore\readme.md
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -61,7 +61,74 @@ CRMemIterator();
 * ...
 */
 
-//在结束程序前需要释放掉内存堆，通常操作系统会制动回收，但此处仍然手动演示
+//在结束程序前需要释放掉内存堆，通常操作系统会自动回收，但此处仍然手动演示
 errcode = CRMemClear();
 if(errcode) CR_LOG_ERR("console", "memory using");
+~~~
+***
+&emsp;需要注意的是，动态内存堆在用户态实现，无法使用硬件的保护模式，故禁用了原生的下标访问模式，并实现了一个动态数组系统和相关接口用以申请和访问动态内存堆资源。  
+&emsp;动态数组的使用示例如下：
+~~~C
+/*
+* ...
+* 在在动态内存堆创建成功的前提下
+*/
+
+CRDYNAMIC dyn1 = CRDyn(10);
+if (!dyn1)
+{
+    CR_LOG_ERR("console", "failed to create dynamic array!");
+    return 1;
+}
+CRMemIterator();
+//动态数组使用完毕之后需要手动释放
+CRFreeDyn(dyn1);
+CRMemIterator();
+~~~
+## 完整示例代码
+~~~C
+/*
+ * @Author: RetliveAdore lizaterop@gmail.com
+ * @Date: 2024-12-01 23:09:04
+ * @LastEditors: RetliveAdore lizaterop@gmail.com
+ * @LastEditTime: 2024-12-07 18:01:59
+ * @FilePath: \CrystalCore\sandbox\main.c
+ * @Description: 
+ * 用于测试的主程序 
+ * Copyright (c) 2024 by lizaterop@gmail.com, All Rights Reserved. 
+ */
+
+#include <CrystalCore.h>
+#include <stdio.h>
+
+typedef void*(*CRALLOC)(void* ptr, CRUINT64 size);
+
+static CRMODULE core = NULL;
+
+int main(int argc, char** argv)
+{
+    core = CRImport("CrystalCore.so", CRCoreFunList, argv[0]);
+    if (!core) printf("failed to load core\n");
+    CRCODE errcode = 0;
+    errcode = CRMemSetup(2048);
+    if(errcode) CR_LOG_ERR("console", "err setup");
+    CRMemIterator();
+    //
+    CRDYNAMIC dyn1 = CRDyn(10);
+    if (!dyn1)
+    {
+        CR_LOG_ERR("console", "failed to create dynamic array!");
+        return 1;
+    }
+    CRMemIterator();
+    //
+    CRFreeDyn(dyn1);
+    CRMemIterator();
+    //
+    errcode = CRMemClear();
+    if(errcode) CR_LOG_ERR("console", "err clear");
+    CR_LOG_IFO("console", "end");
+    CRUnload(core);
+    return 0;
+}
 ~~~
