@@ -1,8 +1,8 @@
-/*
+﻿/*
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-12-05 15:12:25
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-07 14:39:45
+ * @LastEditTime: 2024-12-10 23:10:10
  * @FilePath: \CrystalCore\src\crdyn.c
  * @Description: 
  * 动态数组的实现文件，为了禁用掉原生内存下标访问的方式，
@@ -14,16 +14,6 @@
 #include "header.h"
 
 extern void* CRAlloc(void* ptr, CRUINT64 size);
-
-typedef struct crstructurepub
-{
-    #ifdef CR_WINDOWS
-    CRITICAL_SECTION cs;  //确保多线程安全
-    #elif defined CR_LINUX
-    pthread_mutex_t cs;  //确保多线程安全
-    #endif
-    CRUINT64 total;  //用于指明当前元素数量
-}CRSTRUCTUREPUB;
 
 typedef struct dyn
 {
@@ -60,13 +50,13 @@ CRAPI CRDYNAMIC CRDyn(CRUINT64 size)
     return pInner;
 }
 
-CRAPI CRBOOL CRFreeDyn(CRDYNAMIC dyn)
+CRAPI CRCODE CRFreeDyn(CRDYNAMIC dyn)
 {
 	PCRDYN pInner = dyn;
-	if (!pInner) return CRFALSE;
+	if (!pInner) return 1;
 	CRAlloc(pInner->arr, 0);
 	CRAlloc(pInner, 0);
-	return CRTRUE;
+	return 0;
 }
 
 CRAPI CRUINT64 CRDynSize(CRDYNAMIC dyn)
@@ -91,7 +81,7 @@ static CRUINT8* _inner_dyn_sizedown_(CRUINT8* arr, CRUINT64 capacity)
     return CRAlloc(arr, capacity);
 }
 
-static CRBOOL _inner_dyn_push_(CRDYNAMIC dyn, void* data, CRDynEnum mode)
+static CRCODE _inner_dyn_push_(CRDYNAMIC dyn, void* data, CRDynEnum mode)
 {
 	PCRDYN pInner = dyn;
 	//需要扩容的情况
@@ -100,7 +90,7 @@ static CRBOOL _inner_dyn_push_(CRDYNAMIC dyn, void* data, CRDynEnum mode)
 		pInner->capacity <<= 1;
 		CRUINT8* tmp = _inner_dyn_sizeup_(pInner->arr, pInner->pub.total, pInner->capacity);
 		if (!tmp)
-			return CRFALSE;
+			return 1;  //内存申请失败
 		pInner->arr = tmp;
 	}
 	else  //扩容之后回归正常流程
@@ -132,14 +122,14 @@ static CRBOOL _inner_dyn_push_(CRDYNAMIC dyn, void* data, CRDynEnum mode)
 			break;
 		}
 	}
-    return CRTRUE;
+    return 0;
 }
 
-static CRBOOL _inner_dyn_pop_(CRDYNAMIC dyn, void* data, CRENUM mode)
+static CRCODE _inner_dyn_pop_(CRDYNAMIC dyn, void* data, CRENUM mode)
 {
     PCRDYN pInner = dyn;
 	if (pInner->pub.total == 0)
-		return CRFALSE;
+		return 1;
 	//尚有元素可取的情况
 	switch (mode)
 	{
@@ -173,31 +163,31 @@ static CRBOOL _inner_dyn_pop_(CRDYNAMIC dyn, void* data, CRENUM mode)
 		pInner->capacity >>= 1;
 		pInner->arr = _inner_dyn_sizedown_(pInner->arr, pInner->capacity);
 	}
-	return CRTRUE;
+	return 0;
 }
 
-CRAPI CRBOOL CRDynPush(CRDYNAMIC dyn, void* data, CRDynEnum mode)
+CRAPI CRCODE CRDynPush(CRDYNAMIC dyn, void* data, CRDynEnum mode)
 {
     PCRDYN pInner = dyn;
     if (!pInner)
         return CRFALSE;
-    CRBOOL back;
+    CRCODE err = 0;
     EnterCriticalSection(&(pInner->pub.cs));
-    _inner_dyn_push_(dyn, data, mode);
+    err = _inner_dyn_push_(dyn, data, mode);
     LeaveCriticalSection(&(pInner->pub.cs));
-    return back;
+    return err;
 }
 
-CRAPI CRBOOL CRDynPop(CRDYNAMIC dyn, void* data, CRDynEnum mode)
+CRAPI CRCODE CRDynPop(CRDYNAMIC dyn, void* data, CRDynEnum mode)
 {
     PCRDYN pInner = dyn;
     if (!pInner)
         return CRFALSE;
-    CRBOOL back;
+    CRCODE err = 0;
     EnterCriticalSection(&(pInner->pub.cs));
-    back = _inner_dyn_pop_(dyn, data, mode);
+    err = _inner_dyn_pop_(dyn, data, mode);
     LeaveCriticalSection(&(pInner->pub.cs));
-    return back;
+    return err;
 }
 
 CRAPI CRBOOL CRDynSet(CRDYNAMIC dyn, void *data, CRUINT64 sub, CRDynEnum mode)
@@ -283,4 +273,24 @@ CRAPI CRBOOL CRDynSeek(CRDYNAMIC dyn, void* data, CRUINT64 sub, CRDynEnum mode)
 		return 0;
 	}
 	return CRTRUE;
+}
+
+static void _for_dyn_(CRDYNAMIC dyn, IteratorCallback cal, CRLVOID user)
+{
+	PCRDYN pInner = dyn;
+	CRUINT64 tmp = 0;
+	if (pInner->pub.total % 8)
+		tmp = pInner->pub.total >> 3 + 1;
+	else tmp = pInner->pub.total >> 3;
+	for (int i = 0; i < tmp; i++) cal((CRLVOID)pInner->p64[i], user, i);
+}
+CRAPI CRCODE CRDynIterator(CRDYNAMIC dyn, IteratorCallback cal, CRLVOID user)
+{
+	PCRDYN pInner = dyn;
+	if (!pInner)
+		return 1;
+	if (!cal)
+		return 2;
+	_for_dyn_(pInner, cal, user);
+	return 0;
 }

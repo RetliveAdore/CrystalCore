@@ -27,7 +27,7 @@ out\objs\core\\%.o : core\\%.c
 
 build: clean $(OBJ_FILES_MOD) $(OBJ_FILES_CORE) copy
 	@ar rcs out/Windows/libCrystalCore.a $(OBJ_FILES_CORE)
-	@gcc -shared -o out/Windows/CrystalCore.so $(OBJ_FILES_MOD) $(INCLUDE_PATHS)
+	@gcc -shared -o out/Windows/CrystalCore.so $(OBJ_FILES_MOD) $(INCLUDE_PATHS) -lwinmm
 
 debug:
 	@echo $(C_FILES)

@@ -1,8 +1,8 @@
-/*
+﻿/*
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-16 15:52:23
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-06-16 16:42:37
+ * @LastEditTime: 2024-12-11 11:17:42
  * @FilePath: \CrystalCore\src\init.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -30,13 +30,14 @@ void LeaveCriticalSection(pthread_mutex_t* mt)
 }
 #endif
 
-CRAPI CRBOOL CRModInit(void** list)
+CRAPI CRCODE CRModInit(void** list)
 {
-    _inner_initialize_();
-    return CRTRUE;
+    if (_inner_initialize_()) return 1;
+    return 0;
 }
 
-CRAPI void CRModUninit(void)
+CRAPI CRCODE CRModUninit(void)
 {
-    _inner_delete_;
+    if(_inner_delete_()) return 1;
+	return 0;
 }

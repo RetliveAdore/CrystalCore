@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:54:35
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-07 16:00:25
+ * @LastEditTime: 2024-12-11 16:59:05
  * @FilePath: \CrystalCore\include\CrystalCore.h
  * @Description: 这个就是核心文件头了，内部包含一个自动加载器和手动加载器
  * 自动加载器是用于加载CrystalCore.so的，手动加载器是用于加载出核心以外的所有模块的
@@ -14,6 +14,7 @@
 #include <definitions.h>
 #include <CrystalLog.h>
 #include <CrystalMemory.h>
+#include <CrystalThread.h>
 
 //什么都不做的占位函数
 void _cr_inner_do_nothing_(void);
@@ -24,13 +25,17 @@ void _cr_inner_do_nothing_(void);
  * 模块函数清单传递入CRLoadMod以自动完成模块的加载
 */
 extern void** CRCoreFunList;
-typedef CRBOOL(*CRMODINIT)(void** list);
-typedef void(*CRMODUNINIT)(void);
+typedef CRCODE(*CRMODINIT)(void** list);
+typedef CRCODE(*CRMODUNINIT)(void);
 
 #endif
 
 /**
  * 加载Crystal的模块
+ * 错误代码：
+ * 0：正常；
+ * 1：线程树创建失败；
+ * 2：ID回收池创建失败。
  * 其中argv的作用是提供一个工作区路径，使用这个路径可以稳定地组合出相对于可执行文件的相对路径
  * argv可以传入NULL，但通常是
  * int main(int argc, char* argv[])
@@ -39,8 +44,12 @@ typedef void(*CRMODUNINIT)(void);
 CRMODULE CRImport(const CRCHAR* name, void* list[], const CRCHAR* argv);
 /**
  * 卸载Crystal的模块
+ * 返回值：
+ * 0：正常；
+ * 1：线程树销毁失败；
+ * 2：ID回收池销毁失败。
 */
-void CRUnload(CRMODULE mod);
+CRCODE CRUnload(CRMODULE mod);
 
 /**
  * 日志系统中用于获取时间的函数
@@ -129,11 +138,15 @@ typedef CRDYNAMIC(*PCRDYN)(CRUINT64 size);
 #define CRDyn ((PCRDYN)CRCoreFunList[18])
 /**
  * 释放创建的动态数组
+ * 返回值：
+ * 0：正常；
+ * 1：无效的动态数组。
  */
-typedef CRBOOL(*CRFREEDYN)(CRDYNAMIC dyn);
+typedef CRCODE(*CRFREEDYN)(CRDYNAMIC dyn);
 #define CRFreeDyn ((CRFREEDYN)CRCoreFunList[20])
 /**
  * 获取动态数组大小
+ * 传入：有效的动态数组
  * 返回值：字节数
  */
 typedef CRUINT64(*CRDYNSIZE)(CRDYNAMIC dyn);
@@ -141,29 +154,33 @@ typedef CRUINT64(*CRDYNSIZE)(CRDYNAMIC dyn);
 /**
  * 在动态数组末尾压入数据
  * 参数1：要操作的动态数组
- * 参数2：要压入的数据
+ * 参数2：要压入的数据（指向数据的指针）
  * 参数3：字长模式
- * 返回值：压入失败为CRFALSE，否则为CRTRUE
+ * 返回值：
+ * 0：正常；
+ * 1：扩容失败。
  * 此操作会自动增加动态数组的大小，当容量增加失败时，会压入失败；
  * 字长模式可选，最小单位为字节（8比特），可选为：
  * DYN_MODE_XX，支持的字长为：8、16、32、64。
  */
-typedef CRBOOL(*CRDYNPUSH)(CRDYNAMIC dyn, void* data, CRDynEnum mode);
+typedef CRCODE(*CRDYNPUSH)(CRDYNAMIC dyn, void* data, CRDynEnum mode);
 #define CRDynPush ((CRDYNPUSH)CRCoreFunList[24])
 /**
  * 从动态数组末尾弹出数据
  * 参数1：要操作的动态数组
  * 参数2：用于接收数据的指针
  * 参数3：字长模式
- * 返回值：弹出失败为CRFALSE，否则为CRTRUE
+ * 返回值：
+ * 0：正常；
+ * 1：数组为空。
  * 此操作会自动缩小动态数组的大小，字长模式选择同CRDynPush。
  */
-typedef CRBOOL(*CRDYNPOP)(CRDYNAMIC dyn, void* data, CRDynEnum mode);
+typedef CRCODE(*CRDYNPOP)(CRDYNAMIC dyn, void* data, CRDynEnum mode);
 #define CRDynPop ((CRDYNPOP)CRCoreFunList[26])
 /**
  * 设置动态数组中某一下标的值
  * 参数1：要操作的动态数组
- * 参数2：要设置的源数据
+ * 参数2：要设置的源数据（指向源数据的指针）
  * 参数3：下标
  * 参数4：字长模式
  * 返回值：写入失败为CRFALSE，否则为CRTRUE
@@ -183,5 +200,160 @@ typedef CRBOOL(*CRDYNSET)(CRDYNAMIC dyn, void *data, CRUINT64 sub, CRDynEnum mod
  */
 typedef CRBOOL(*CRDYNSEEK)(CRDYNAMIC dyn, void* data, CRUINT64 sub, CRDynEnum mode);
 #define CRDynSeek ((CRDYNSEEK)CRCoreFunList[30])
+
+/**
+ * 创建一个键值树
+ * 返回值：键值树
+ * 假如创建失败，返回NULL，只有初始化动态内存堆之后且容量充足才能成功创建。
+ */
+typedef CRRBTREE(*PCRTREE)(void);
+#define CRTree ((PCRTREE)CRCoreFunList[32])
+/**
+ * 释放创建的键值树
+ * 返回值：
+ * 0：正常；
+ * 1：无效的键值树。
+ */
+typedef CRBOOL(*CRFREETREE)(CRRBTREE tree);
+#define CRFreeTree ((CRFREETREE)CRCoreFunList[34])
+/**
+ * 获取键值树节点数量
+ * 传入：有效的键值树
+ * 返回值：数量
+ */
+typedef CRUINT64(*CRTREECOUNT)(CRRBTREE tree);
+#define CRTreeCount ((CRTREECOUNT)CRCoreFunList[36])
+/**
+ * 往键值树中插入节点
+ * 参数1：键值树
+ * 参数2：要插入的数据（指针）
+ * 参数3：键值
+ * 返回值：
+ * 0：正常；
+ * 1：无效的键值树；
+ * 2：内存申请失败。
+ */
+typedef CRCODE(*CRTREEPUT)(CRRBTREE tree, CRLVOID data, CRINT64 key);
+#define CRTreePut ((CRTREEPUT)CRCoreFunList[38])
+/**
+ * 从键值树中移除节点
+ * 参数1：键值树
+ * 参数2：用于承载结果的指针
+ * 参数3：键值
+ * 返回值：
+ * 0：正常；
+ * 1：无效的键值树；
+ * 2：空树；
+ * 3：未找到。
+ * 如果没有找到对应键值的节点，将不进行任何操作。
+ */
+typedef CRCODE(*CRTREEGET)(CRRBTREE tree, CRLVOID* data, CRINT64 key);
+#define CRTreeGet ((CRTREEGET)CRCoreFunList[40])
+/**
+ * 在键值树中搜索节点
+ * 参数1：键值树
+ * 参数2：用于承载结果的指针
+ * 参数3：键值
+ * 返回值：
+ * 0：正常；
+ * 1：无效的键值树；
+ * 2：空树；
+ * 3：未找到。
+ */
+typedef CRCODE(*CRTREESEEK)(CRRBTREE tree, CRLVOID* data, CRINT64 key);
+#define CRTreeSeek ((CRTREESEEK)CRCoreFunList[42])
+
+/**
+ * 遍历动态数组
+ * 参数1：动态数组
+ * 参数2：回调函数
+ * 参数3：用户数据（供回调函数使用）
+ * 返回值：
+ * 0：遍历成功；
+ * 1：无效的动态数组；
+ * 2：无效的回调函数。
+ * 此遍历会以CRLVOID为单位将数组中的元素取出，然后传入回调函数执行。
+ * 此操作不会对数组中数据进行修改。
+ */
+typedef CRCODE(*CRDYNITERATOR)(CRDYNAMIC dyn, IteratorCallback cal, CRLVOID user);
+#define CRDynIterator ((CRDYNITERATOR)CRCoreFunList[44])
+/**
+ * 遍历键值树
+ * 参数1：键值树
+ * 参数2：回调函数
+ * 参数3：用户数据（供回调函数使用）
+ * 返回值：
+ * 0：遍历成功；
+ * 1：无效的键值树；
+ * 2：无效的回调函数。
+ * 此遍历使用中序遍历。
+ * 此操作不会对节点和节点内数据有任何修改。
+ */
+typedef CRCODE(*CRTREEITERATOR)(CRRBTREE tree, IteratorCallback cal, CRLVOID user);
+#define CRTreeIterator ((CRTREEITERATOR)CRCoreFunList[46])
+
+/**
+ * 初始化多线程功能
+ * 返回值：
+ * 0：正常；
+ * 1：线程树创建失败；
+ * 2：回收池创建失败。
+ * 此功能依赖动态内存堆，请务必保证进行初始化时已经创建内存堆且容量充足。
+ */
+typedef CRCODE(*CRTHREADINIT)(void);
+#define CRThreadInit ((CRTHREADINIT)CRCoreFunList[48])
+/**
+ * 逆初始化多线程功能
+ * 返回值：
+ * 0：正常；
+ * 1：线程树销毁失败；
+ * 2：回收池销毁失败。
+ * 此函数将多线程功能还原到未初始化的状态，但不会终止已经创建的线程。
+ */
+typedef CRCODE(*CRTHREADUNINIT)(void);
+#define CRThreadUninit ((CRTHREADUNINIT)CRCoreFunList[50])
+/**
+ * 线程休眠
+ * 传入休眠时间（ms）
+ * 无返回值
+ */
+typedef void(*CRSLEEP)(CRUINT64 ms);
+#define CRSleep ((CRSLEEP)CRCoreFunList[52])
+/**
+ * 创建线程
+ * 参数1：线程函数
+ * 参数2：用户数据
+ * 返回值：线程ID，其中0为非法ID。
+ */
+typedef CRTHREAD(*PCRTHREAD)(CRThreadFunc, CRLVOID data);
+#define CRThread ((PCRTHREAD)CRCoreFunList[54])
+/**
+ * 等待线程
+ * 参数1：线程ID
+ * 无返回值。
+ * 线程结束或不存在时返回。
+ */
+typedef void(*CRWAITTHREAD)(CRTHREAD thread);
+#define CRWaitThread ((CRWAITTHREAD)CRCoreFunList[56])
+/**
+ * 创建锁
+ */
+typedef CRLOCK(*CRLOCKCREATE)(void);
+#define CRLockCreate ((CRLOCKCREATE)CRCoreFunList[58])
+/**
+ * 释放锁
+ */
+typedef void(*CRLOCKRELEASE)(CRLOCK lock);
+#define CRLockRelease ((CRLOCKRELEASE)CRCoreFunList[60])
+/**
+ * 加锁
+ */
+typedef void(*PCrLOCK)(CRLOCK lock);
+#define CRLock ((PCRLOCK)CRCoreFunList[62])
+/**
+ * 解锁
+ */
+typedef void(*CRUNLOCK)(CRLOCK lock);
+#define CRUnlock ((CRUNLOCK)CRCoreFunList[64])
 
 #endif

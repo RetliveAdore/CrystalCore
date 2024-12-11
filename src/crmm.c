@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:35:36
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-07 15:50:41
+ * @LastEditTime: 2024-12-11 11:06:16
  * @FilePath: \CrystalCore\src\crmm.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -33,14 +33,16 @@ typedef struct block_header
 } *PBLOCK_HEADER;
 #define HEADER_SIZE sizeof(struct block_header)
 
-void _inner_initialize_()
+CRCODE _inner_initialize_()
 {
     InitializeCriticalSection(&mem_cs);
+    return 0;
 }
 
-void _inner_delete_()
+CRCODE _inner_delete_()
 {
     DeleteCriticalSection(&mem_cs);
+    return 0;
 }
 
 /**
@@ -321,6 +323,11 @@ CRAPI void* CRAlloc(void* ptr, CRUINT64 size)
  */
 CRAPI void CRMemIterator(void)
 {
+    if (!ram)
+    {
+        CRPrint(CR_TC_RED, "error: memory not inited!\n");
+        return;
+    }
     PBLOCK_HEADER block = (PBLOCK_HEADER)ram;
     CRUINT64 i = 1;
     EnterCriticalSection(&mem_cs);

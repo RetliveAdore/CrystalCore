@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:36:02
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-06 23:20:36
+ * @LastEditTime: 2024-12-10 10:27:47
  * @FilePath: \CrystalCore\include\CrystalMemory.h
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -13,6 +13,9 @@
 #include "definitions.h"
 
 typedef CRLVOID CRDYNAMIC;
+typedef CRLVOID CRRBTREE;
+
+typedef void(*IteratorCallback)(CRLVOID data, CRLVOID user, CRUINT64 key);
 
 typedef enum CRDynEnum
 {

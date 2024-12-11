@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:53:49
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-07 15:45:50
+ * @LastEditTime: 2024-12-11 16:13:50
  * @FilePath: \CrystalCore\core\crcore.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -37,24 +37,45 @@ void _cr_inner_do_nothing_(void){};
 
 void* CRCoreFunListArr[] =
 {
-    _cr_inner_do_nothing_, "CRLogDate",    //0
-    _cr_inner_do_nothing_, "CRPrint",      //2
-    _cr_inner_do_nothing_, "CRTrace",      //4
-    _cr_inner_do_nothing_, "CRSetLogFile", //6
-    _cr_inner_do_nothing_, "CRLogDefault", //8
+    _cr_inner_do_nothing_, "CRLogDate",     //0
+    _cr_inner_do_nothing_, "CRPrint",       //2
+    _cr_inner_do_nothing_, "CRTrace",       //4
+    _cr_inner_do_nothing_, "CRSetLogFile",  //6
+    _cr_inner_do_nothing_, "CRLogDefault",  //8
     //
-    _cr_inner_do_nothing_, "CRAlloc",      //10
-    _cr_inner_do_nothing_, "CRMemSetup",   //12
-    _cr_inner_do_nothing_, "CRMemClear",   //14
-    _cr_inner_do_nothing_, "CRMemIterator",//16
+    _cr_inner_do_nothing_, "CRAlloc",       //10
+    _cr_inner_do_nothing_, "CRMemSetup",    //12
+    _cr_inner_do_nothing_, "CRMemClear",    //14
+    _cr_inner_do_nothing_, "CRMemIterator", //16
     //
-    _cr_inner_do_nothing_, "CRDyn",        //18
-    _cr_inner_do_nothing_, "CRFreeDyn",    //20
-    _cr_inner_do_nothing_, "CRDynSize",    //22
-    _cr_inner_do_nothing_, "CRDynPush",    //24
-    _cr_inner_do_nothing_, "CRDynPop",     //26
-    _cr_inner_do_nothing_, "CRDynSet",     //28
-    _cr_inner_do_nothing_, "CRDynSeek",    //30
+    _cr_inner_do_nothing_, "CRDyn",         //18
+    _cr_inner_do_nothing_, "CRFreeDyn",     //20
+    _cr_inner_do_nothing_, "CRDynSize",     //22
+    _cr_inner_do_nothing_, "CRDynPush",     //24
+    _cr_inner_do_nothing_, "CRDynPop",      //26
+    _cr_inner_do_nothing_, "CRDynSet",      //28
+    _cr_inner_do_nothing_, "CRDynSeek",     //30
+    //
+    _cr_inner_do_nothing_, "CRTree",        //32
+    _cr_inner_do_nothing_, "CRFreeTree",    //34
+    _cr_inner_do_nothing_, "CRTreeCount",   //36
+    _cr_inner_do_nothing_, "CRTreePut",     //38
+    _cr_inner_do_nothing_, "CRTreeGet",     //40
+    _cr_inner_do_nothing_, "CRTreeSeek",    //42
+    //
+    _cr_inner_do_nothing_, "CRDynIterator", //44
+    _cr_inner_do_nothing_, "CRTreeIterator",//46
+    //
+    _cr_inner_do_nothing_, "CRThreadInit",  //48
+    _cr_inner_do_nothing_, "CRThreadUninit",//50
+    _cr_inner_do_nothing_, "CRSleep",       //52
+    _cr_inner_do_nothing_, "CRThread",      //54
+    _cr_inner_do_nothing_, "CRWaitThread",  //56
+    _cr_inner_do_nothing_, "CRLockCreate",  //58
+    _cr_inner_do_nothing_, "CRLockRelease", //60
+    _cr_inner_do_nothing_, "CRLock",        //62
+    _cr_inner_do_nothing_, "CRUnlock",      //64
+    //
     0 //检测到0表示清单结尾
 };
 void** CRCoreFunList = CRCoreFunListArr;
@@ -118,7 +139,8 @@ CRMODULE CRImport(const CRCHAR* name, void* list[], const CRCHAR* argv)
     #elif defined CR_LINUX
     _inner_init_mod_ = (CRMODINIT)dlsym(pInner->mod, "CRModInit");
     #endif
-    if (_inner_init_mod_) _inner_init_mod_(CRCoreFunList);
+    CRCODE err = 0;
+    if (_inner_init_mod_) err = _inner_init_mod_(CRCoreFunList);
     //
     while(list[i])
     {
@@ -135,14 +157,16 @@ CRMODULE CRImport(const CRCHAR* name, void* list[], const CRCHAR* argv)
         i += 2;
     }
     if (argv) free(*((CRCHAR**)&name));
+    if (err) CR_LOG_ERR("auto", "error importing module, error code: %d", err);
     return pInner;
 }
 
-void CRUnload(CRMODULE mod)
+CRCODE CRUnload(CRMODULE mod)
 {
-    if (!mod) return;
+    if (!mod) return 1;
     CRMODULEINNER* pInner = mod;
     CRUINT64 i = 0;
+    CRCODE err = 0;
     while(pInner->list[i])
     {
         pInner->list[i] = _cr_inner_do_nothing_;
@@ -150,7 +174,8 @@ void CRUnload(CRMODULE mod)
     }
     #ifdef CR_WINDOWS
     _inner_uninit_mod_ = (CRMODUNINIT)GetProcAddress(pInner->mod, "CRModUninit");
-    if (_inner_uninit_mod_) _inner_uninit_mod_();
+    if (_inner_uninit_mod_) err = _inner_uninit_mod_();
+    if (err) CR_LOG_ERR("auto", "error unloading module, error code: %d", err);
     FreeLibrary(pInner->mod);
     #elif defined CR_LINUX
     _inner_uninit_mod_ = (CRMODUNINIT)dlsym(pInner->mod, "CRModUninit");
@@ -158,4 +183,5 @@ void CRUnload(CRMODULE mod)
     dlclose(pInner->mod);
     #endif
     free(mod);
+    return err;
 }
