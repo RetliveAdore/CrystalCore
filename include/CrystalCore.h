@@ -348,7 +348,7 @@ typedef void(*CRLOCKRELEASE)(CRLOCK lock);
 /**
  * 加锁
  */
-typedef void(*PCrLOCK)(CRLOCK lock);
+typedef void(*PCRLOCK)(CRLOCK lock);
 #define CRLock ((PCRLOCK)CRCoreFunList[62])
 /**
  * 解锁
