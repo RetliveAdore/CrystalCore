@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:53:49
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-11 16:13:50
+ * @LastEditTime: 2025-01-05 12:34:13
  * @FilePath: \CrystalCore\core\crcore.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -76,6 +76,8 @@ void* CRCoreFunListArr[] =
     _cr_inner_do_nothing_, "CRLock",        //62
     _cr_inner_do_nothing_, "CRUnlock",      //64
     //
+    _cr_inner_do_nothing_, "CRTimerMark",   //66
+    _cr_inner_do_nothing_, "CRTimerPeek",   //68
     0 //检测到0表示清单结尾
 };
 void** CRCoreFunList = CRCoreFunListArr;
@@ -90,11 +92,11 @@ static const CRCHAR* _inner_conv_path_(const CRCHAR* name, const CRCHAR* argv)
     CRUINT64 i = 0;
     while (argv[i] != '\0')
     {
-        #ifdef CR_WINDOWS
+    #ifdef CR_WINDOWS
         if (argv[i] == '\\') l1 = i + 1;
-        #elif defined CR_LINUX
+    #elif defined CR_LINUX
         if (argv[i] == '/') l1 = i + 1;
-        #endif
+    #endif
         i++;
     }
     while (name[l2] != 0) l2++;   
@@ -104,12 +106,12 @@ static const CRCHAR* _inner_conv_path_(const CRCHAR* name, const CRCHAR* argv)
         back[p] = argv[p];
     for (int p = 0; p < l2; p++)
     {
-        #ifdef CR_WINDOWS
+    #ifdef CR_WINDOWS
         if (name[p] == '/') back[p + l1] = '\\';
         else back[p + l1] = name[p];
-        #else
+    #else
         back[p + l1] = name[p];
-        #endif
+    #endif
     }
     back[l1 + l2] = '\0';
     return back;
@@ -122,11 +124,11 @@ CRMODULE CRImport(const CRCHAR* name, void* list[], const CRCHAR* argv)
     CRMODULEINNER* pInner = malloc(sizeof(CRMODULEINNER));
     if (!pInner) return NULL;
     pInner->list = list;
-    #ifdef CR_WINDOWS
+#ifdef CR_WINDOWS
     pInner->mod = LoadLibraryA(name);
-    #elif defined CR_LINUX
+#elif defined CR_LINUX
     pInner->mod = dlopen(name, RTLD_LAZY);
-    #endif 
+#endif 
     if (!pInner->mod)
     {
         free(pInner);
@@ -134,24 +136,24 @@ CRMODULE CRImport(const CRCHAR* name, void* list[], const CRCHAR* argv)
     }
     CRUINT64 i = 0;
     //
-    #ifdef CR_WINDOWS
+#ifdef CR_WINDOWS
     _inner_init_mod_ = (CRMODINIT)GetProcAddress(pInner->mod, "CRModInit");
-    #elif defined CR_LINUX
+#elif defined CR_LINUX
     _inner_init_mod_ = (CRMODINIT)dlsym(pInner->mod, "CRModInit");
-    #endif
+#endif
     CRCODE err = 0;
     if (_inner_init_mod_) err = _inner_init_mod_(CRCoreFunList);
     //
     while(list[i])
     {
-        #ifdef CR_WINDOWS
+    #ifdef CR_WINDOWS
         list[i] = GetProcAddress(pInner->mod, list[i + 1]);
-        #elif defined CR_LINUX
+    #elif defined CR_LINUX
         list[i] = dlsym(pInner->mod, list[i + 1]);
-        #endif
+    #endif
         if (!list[i])
         {
-            CR_LOG_ERR("auto", "Faild load: %s", list[i + 1]);
+            CR_LOG_ERR("auto", "Faild to load: %s", list[i + 1]);
             list[i] = _cr_inner_do_nothing_;
         }
         i += 2;
@@ -172,16 +174,16 @@ CRCODE CRUnload(CRMODULE mod)
         pInner->list[i] = _cr_inner_do_nothing_;
         i += 2;
     }
-    #ifdef CR_WINDOWS
+#ifdef CR_WINDOWS
     _inner_uninit_mod_ = (CRMODUNINIT)GetProcAddress(pInner->mod, "CRModUninit");
     if (_inner_uninit_mod_) err = _inner_uninit_mod_();
     if (err) CR_LOG_ERR("auto", "error unloading module, error code: %d", err);
     FreeLibrary(pInner->mod);
-    #elif defined CR_LINUX
+#elif defined CR_LINUX
     _inner_uninit_mod_ = (CRMODUNINIT)dlsym(pInner->mod, "CRModUninit");
     if (_inner_uninit_mod_) _inner_uninit_mod_();
     dlclose(pInner->mod);
-    #endif
+#endif
     free(mod);
     return err;
 }

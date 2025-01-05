@@ -20,18 +20,29 @@ clean:
 copy:
 
 out\objs\src\\%.o : src\\%.c
-	@gcc -fvisibility=hidden -fPIC -c $^ -o $@ $(INCLUDE_PATHS)
+	@gcc -fexec-charset=GBK -fvisibility=hidden -fPIC -c $^ -o $@ $(INCLUDE_PATHS)
 
 out\objs\core\\%.o : core\\%.c
-	@gcc -fvisibility=hidden -fPIC -c $^ -o $@ $(INCLUDE_PATHS)
+	@gcc -fexec-charset=GBK -fvisibility=hidden -fPIC -c $^ -o $@ $(INCLUDE_PATHS)
 
 build: clean $(OBJ_FILES_MOD) $(OBJ_FILES_CORE) copy
 	@ar rcs out/Windows/libCrystalCore.a $(OBJ_FILES_CORE)
-	@gcc -shared -o out/Windows/CrystalCore.so $(OBJ_FILES_MOD) $(INCLUDE_PATHS) -lwinmm
+	@gcc -fexec-charset=GBK -shared -o out/Windows/CrystalCore.so $(OBJ_FILES_MOD) $(INCLUDE_PATHS) -lwinmm
 
-debug:
-	@echo $(C_FILES)
-	@echo $(C_FILES_MOD)
-	@echo $(C_FILES_CORE)
+C_FILES_TEST := $(filter test\\%.c,$(C_FILES))
 
-.PHONY: build clean copy debug
+TEST_LIBRARY_PATHS := .\\out\\Windows
+
+TEST_LIBRARIES := CrystalCore
+
+TEST_LIBRARY_PATHS := $(foreach item,$(TEST_LIBRARY_PATHS),-L$(item))
+TEST_LIBRARIES := $(foreach item,$(TEST_LIBRARIES),-l$(item))
+
+cleantest:
+	@if exist out\\Windows\\Test1.exe (rm out\\Windows\\Test1.exe)
+
+test:
+	@if not exist out\\ (echo you have to "mingw32-make build" first) \
+	else (gcc -fexec-charset=GBK -o out\\Windows\\Test1.exe $(INCLUDE_PATHS) $(C_FILES_TEST) $(TEST_LIBRARY_PATHS) $(TEST_LIBRARIES))
+
+.PHONY: build clean copy test

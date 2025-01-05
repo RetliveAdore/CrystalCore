@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-12-05 15:12:25
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-10 23:10:10
+ * @LastEditTime: 2025-01-05 18:51:55
  * @FilePath: \CrystalCore\src\crdyn.c
  * @Description: 
  * 动态数组的实现文件，为了禁用掉原生内存下标访问的方式，
@@ -93,34 +93,33 @@ static CRCODE _inner_dyn_push_(CRDYNAMIC dyn, void* data, CRDynEnum mode)
 			return 1;  //内存申请失败
 		pInner->arr = tmp;
 	}
-	else  //扩容之后回归正常流程
+	//扩容之后回归正常流程
+	switch (mode)
 	{
-		switch (mode)
-		{
-		case DYN_MODE_8:
-			pInner->p8[pInner->pub.total++] = *(CRUINT8*)data;
-			break;
-		case DYN_MODE_16:
-			pInner->pub.total >>= 1;
-			pInner->pub.total <<= 1;
-			pInner->p16[pInner->pub.total] = *(CRUINT16*)data;
-			pInner->pub.total += 2;
-			break;
-		case DYN_MODE_32:
-			pInner->pub.total >>= 2;
-			pInner->pub.total <<= 2;
-			pInner->p32[pInner->pub.total] = *(CRUINT32*)data;
-			pInner->pub.total += 4;
-			break;
-		case DYN_MODE_64:
-			pInner->pub.total >>= 3;
-			pInner->pub.total <<= 3;
-			pInner->p64[pInner->pub.total] = *(CRUINT64*)data;
-			pInner->pub.total += 8;
-			break;
-		default:
-			break;
-		}
+	case DYN_MODE_8:
+		pInner->p8[pInner->pub.total] = *(CRUINT8*)data;
+		pInner->pub.total += 1;
+		break;
+	case DYN_MODE_16:
+		pInner->pub.total >>= 1;
+		pInner->pub.total <<= 1;
+		pInner->p16[pInner->pub.total >> 1] = *(CRUINT16*)data;
+		pInner->pub.total += 2;
+		break;
+	case DYN_MODE_32:
+		pInner->pub.total >>= 2;
+		pInner->pub.total <<= 2;
+		pInner->p32[pInner->pub.total >> 2] = *(CRUINT32*)data;
+		pInner->pub.total += 4;
+		break;
+	case DYN_MODE_64:
+		pInner->pub.total >>= 3;
+		pInner->pub.total <<= 3;
+		pInner->p64[pInner->pub.total >> 3] = *(CRUINT64*)data;
+		pInner->pub.total += 8;
+		break;
+	default:
+		break;
 	}
     return 0;
 }
@@ -280,7 +279,7 @@ static void _for_dyn_(CRDYNAMIC dyn, IteratorCallback cal, CRLVOID user)
 	PCRDYN pInner = dyn;
 	CRUINT64 tmp = 0;
 	if (pInner->pub.total % 8)
-		tmp = pInner->pub.total >> 3 + 1;
+		tmp = (pInner->pub.total >> 3) + 1;
 	else tmp = pInner->pub.total >> 3;
 	for (int i = 0; i < tmp; i++) cal((CRLVOID)pInner->p64[i], user, i);
 }

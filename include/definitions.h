@@ -2,8 +2,8 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-05-29 18:59:49
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-05-29 20:36:47
- * @FilePath: \Crystal-Log\public\include\definitions.h
+ * @LastEditTime: 2025-01-05 12:35:01
+ * @FilePath: \CrystalCore\include\definitions.h
  * @Description: 包含Crystal会用到的所有共有的类型和宏定义
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
  */
@@ -33,7 +33,7 @@ typedef CRLVOID CRSTRUCTURE;
 
 //
 
-typedef CRLVOID CRTIMER;
+typedef double CRTIMER;
 typedef CRLVOID CRTHREAD;
 typedef CRLVOID CRLOCK;
 typedef CRUINT64 CRWINDOW;

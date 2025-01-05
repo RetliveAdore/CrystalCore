@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-16 15:52:23
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-11 11:17:42
+ * @LastEditTime: 2025-01-05 13:57:10
  * @FilePath: \CrystalCore\src\init.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -33,6 +33,7 @@ void LeaveCriticalSection(pthread_mutex_t* mt)
 CRAPI CRCODE CRModInit(void** list)
 {
     if (_inner_initialize_()) return 1;
+	if (_inner_timer_setup_()) return 2;
     return 0;
 }
 

@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-06-01 23:54:35
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-11 16:59:05
+ * @LastEditTime: 2025-01-05 17:49:22
  * @FilePath: \CrystalCore\include\CrystalCore.h
  * @Description: 这个就是核心文件头了，内部包含一个自动加载器和手动加载器
  * 自动加载器是用于加载CrystalCore.so的，手动加载器是用于加载出核心以外的所有模块的
@@ -150,7 +150,7 @@ typedef CRCODE(*CRFREEDYN)(CRDYNAMIC dyn);
  * 返回值：字节数
  */
 typedef CRUINT64(*CRDYNSIZE)(CRDYNAMIC dyn);
-#define CRDynSize ((CRDYNSIZE)CRCoreFunList[22]);
+#define CRDynSize ((CRDYNSIZE)CRCoreFunList[22])
 /**
  * 在动态数组末尾压入数据
  * 参数1：要操作的动态数组
@@ -355,5 +355,23 @@ typedef void(*PCRLOCK)(CRLOCK lock);
  */
 typedef void(*CRUNLOCK)(CRLOCK lock);
 #define CRUnlock ((CRUNLOCK)CRCoreFunList[64])
+/**
+ * 标记计时器
+ * 参数：指向计时器的指针
+ * 返回值：距离上次标记的时间（秒）
+ * 计时器不需要专门创建，直接声明一个即可（双精度浮点数），
+ * 此函数将标记计时器，后续的计时都将以此为起点，直到再次标记。
+ */
+typedef double(*CRTIMERMARK)(CRTIMER *pTimer);
+#define CRTimerMark ((CRTIMERMARK)CRCoreFunList[66])
+/**
+ * 窥探计时器
+ * 参数：指向计时器的指针
+ * 返回值：距离上次标记的时间（秒）
+ * 计时器不需要专门创建，直接声明一个即可（双精度浮点数），
+ * 此函数不会标记计时器，仅返回时间。
+ */
+typedef double(*CRTIMERPEEK)(CRTIMER *pTimer);
+#define CRTimerPeek ((CRTIMERPEEK)CRCoreFunList[68])
 
 #endif

@@ -29,9 +29,21 @@ build: clean $(OBJ_FILES_MOD) $(OBJ_FILES_CORE) copy
 	@ar rcs out/Linux/libCrystalCore.a $(OBJ_FILES_CORE)
 	@gcc -shared -o out/Linux/CrystalCore.so $(OBJ_FILES_MOD) $(INCLUDE_PATHS)
 
-debug:
-	@echo $(C_FILES)
-	@echo $(C_FILES_MOD)
-	@echo $(C_FILES_CORE)
+C_FILES_TEST := $(filter ./test/%.c,$(C_FILES))
 
-.PHONY: build clean copy debug
+TEST_LIBRARY_PATHS := ./out/Linux
+
+TEST_LIBRARIES := CrystalCore
+
+TEST_LIBRARY_PATHS := $(foreach item,$(TEST_LIBRARY_PATHS),-L$(item))
+TEST_LIBRARIES := $(foreach item,$(TEST_LIBRARIES),-l$(item))
+
+cleantest:
+	@if [ -d "./out/Linux/Test1" ]; then rm ./out/Linux/Test1;fi
+
+test: cleantest
+	@if [ ! -d "./out/" ];then echo you have to "make build" first; \
+	else gcc -o ./out/Linux/Test1 $(INCLUDE_PATHS) $(C_FILES_TEST) $(TEST_LIBRARY_PATHS) $(TEST_LIBRARIES); \
+	fi
+
+.PHONY: build clean copy

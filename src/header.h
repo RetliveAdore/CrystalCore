@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-12-02 17:23:23
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-12-10 20:47:02
+ * @LastEditTime: 2025-01-05 12:55:36
  * @FilePath: \CrystalCore\src\header.h
  * @Description: 
  * CrystalCore内部共享的头文件
@@ -10,6 +10,8 @@
  */
 #ifndef _INCLUDE_HEADER_H_
 #define _INCLUDE_HEADER_H_
+
+#include <definitions.h>
 
 /**
  * 用于多线程操作加锁，确保安全性
@@ -38,7 +40,7 @@ typedef struct crstructurepub
 
 CRCODE _inner_initialize_();
 CRCODE _inner_delete_();
-CRCODE _inner_crthread_init_();
-CRCODE _inner_crthread_uninit_();
+
+CRCODE _inner_timer_setup_();
 
 #endif
