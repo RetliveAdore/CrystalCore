@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-05-29 18:26:08
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2025-01-14 16:41:24
+ * @LastEditTime: 2025-01-14 16:52:44
  * @FilePath: \CrystalCore\src\crlog.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -27,6 +27,8 @@
 
 #define BUFFER_SIZE 2048
 #define MAX_STRLEN BUFFER_SIZE
+
+FILE *logFile = NULL;
 
 //一次性函数的设计模式，用于防止重复初始化
 static void _inner_init_logfile_name_(void);
@@ -151,12 +153,12 @@ Throw:
     {
         //初始化文件名（一次性函数，重复调用不影响）
         _inner_init_();
-        FILE* fp = fopen(logFileName, "w");
-        if (fp)
+        if (!logFile)
+            logFile = fopen(logFileName, "w");
+        if (logFile)
         {
-            fwrite(buffer, _inner_strlen_(buffer), 1, fp);
-            fwrite("\n", 1, 1, fp);
-            fclose(fp);
+            fwrite(buffer, _inner_strlen_(buffer), 1, logFile);
+            fwrite("\n", 1, 1, logFile);
         }
     }
     else
