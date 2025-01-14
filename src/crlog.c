@@ -2,7 +2,7 @@
  * @Author: RetliveAdore lizaterop@gmail.com
  * @Date: 2024-05-29 18:26:08
  * @LastEditors: RetliveAdore lizaterop@gmail.com
- * @LastEditTime: 2024-06-18 15:59:02
+ * @LastEditTime: 2025-01-14 16:41:24
  * @FilePath: \CrystalCore\src\crlog.c
  * @Description: 
  * Coptright (c) 2024 by RetliveAdore-lizaterop@gmail.com, All Rights Reserved. 
@@ -151,7 +151,7 @@ Throw:
     {
         //初始化文件名（一次性函数，重复调用不影响）
         _inner_init_();
-        FILE* fp = fopen(logFileName, "a+");
+        FILE* fp = fopen(logFileName, "w");
         if (fp)
         {
             fwrite(buffer, _inner_strlen_(buffer), 1, fp);
